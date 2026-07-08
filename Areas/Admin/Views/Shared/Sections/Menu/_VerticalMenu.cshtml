@@ -1,0 +1,59 @@
+@{
+  TempData.Keep();
+  string? currentPage = ViewContext.HttpContext.Request.Path;
+}
+
+<!-- Menu -->
+@* ! Do this simple *@
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+
+  @* ! Hide app brand if navbar-full *@
+  <div class='app-brand demo @((@ViewData["navbarFull"] != null && Convert.ToBoolean(@ViewData["navbarFull"])) ? "d-xl-none" : "")'>
+    <a asp-controller="Dashboards" asp-action="Index" class="app-brand-link">
+      <span class="app-brand-logo demo">
+        @await Html.PartialAsync("../_Partials/_Macros")
+      </span>
+      <span class="app-brand-text demo menu-text fw-bold ms-2">@TempData.Peek("appName")</span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+      <i class="icon-base bx bx-chevron-left d-block d-xl-none align-middle"></i>
+    </a>
+  </div>
+
+  <div class="menu-divider mt-0"></div>
+
+  <div class="menu-inner-shadow"></div>
+
+  @* ! Full version menu-items *@
+  <ul class="menu-inner py-1">
+
+    <li class='menu-item@(currentPage == "/Admin/Dashboard" ? " active" : "")'>
+      <a asp-controller="Dashboard" asp-action="Index" class="menu-link">
+        <i class="menu-icon icon-base bx bx-home-smile"></i>
+        <div class="text-truncate">Dashboard</div>
+      </a>
+    </li>
+    <li class='menu-item@(currentPage == "/Admin/Category" ? " active" : "")'>
+      <a asp-controller="Category" asp-action="Index" class="menu-link">
+        <i class="menu-icon icon-base bx bx-category"></i>
+        <div class="text-truncate">Category</div>
+      </a>
+    </li>
+    <li class='menu-item@(currentPage == "/Admin/News" ? " active" : "")'>
+      <a asp-controller="News" asp-action="Index" class="menu-link">
+        <i class="menu-icon icon-base bx bx-news"></i>
+        <div class="text-truncate">News</div>
+      </a>
+    </li>
+    
+  </ul>
+
+</aside>
+<!-- / Menu -->
+
+    
+  </ul>
+
+</aside>
+<!-- / Menu -->

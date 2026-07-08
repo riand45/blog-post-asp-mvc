@@ -1,0 +1,84 @@
+@model List<CompanyProfileMVC.Areas.Admin.Models.CategoryViewModel>
+@{
+  ViewData["Title"] = "Category - Analytics";
+}
+@section VendorStyles {
+<link rel="stylesheet" href="~/vendor/libs/apex-charts/apex-charts.css" />
+}
+@section VendorScripts {
+<script src="~/vendor/libs/apex-charts/apexcharts.js"></script>
+}
+@section PageScripts {
+<script src="~/js/dashboards-analytics.js"></script>
+}
+
+@* ************** Content ************** *@
+
+<div class="row gy-6">
+  <!-- Bootstrap modals -->
+  <div class="col-lg-12">
+    <div class="card">
+      <h5 class="card-header">Category</h5>
+      <div class="card-body">
+        <div class="row gy-3">
+          <!-- Default Modal -->
+          <div class="col-lg-4 col-md-6">
+            <div class="mt-4">
+              <!-- Button trigger modal -->
+              <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#basicModal">Add Category</button>
+
+              <!-- Modal -->
+              <div class="modal fade" id="basicModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                  <div class="modal-content">
+                    <div class="modal-header">
+                      <h5 class="modal-title" id="exampleModalLabel1">Add Category</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row g-6">
+                        <div class="col mb-6">
+                          <label for="nameBasic" class="form-label">Name</label>
+                          <input type="text" id="nameBasic" class="form-control" placeholder="Enter Name" />
+                        </div>
+                      </div>
+                      
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Close</button>
+                      <button type="button" class="btn btn-primary">Save changes</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nama Lengkap</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach (var category in Model)
+              {
+                <tr>
+                  <td>@category.Id</td>
+                  <td>@category.Name</td>
+                  <td>
+                    <button type="button" class="btn btn-primary btn-sm" data-id="@category.Id">Edit</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
