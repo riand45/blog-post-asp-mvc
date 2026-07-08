@@ -1,4 +1,4 @@
-@model List<CompanyProfileMVC.Areas.Admin.Models.CategoryViewModel>
+@model CompanyProfileMVC.Areas.Admin.Models.CategoryListViewModel
 @{
   ViewData["Title"] = "Category - Analytics";
 }
@@ -20,6 +20,9 @@
     var modalEl = document.getElementById('basicModal');
     var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     var tableBody = document.getElementById('categoryTableBody');
+    var paginationEl = document.getElementById('categoryPagination');
+    var listUrl = '@Url.Action("List", "Category")';
+    var currentPage = @Model.Page;
 
     function setLoading(isLoading) {
       submitBtn.disabled = isLoading;
@@ -30,6 +33,87 @@
       errorEl.textContent = message || '';
       input.classList.toggle('is-invalid', !!message);
     }
+
+    function renderRows(items) {
+      tableBody.innerHTML = '';
+
+      if (items.length === 0) {
+        var emptyRow = document.createElement('tr');
+        var emptyCell = document.createElement('td');
+        emptyCell.colSpan = 3;
+        emptyCell.className = 'text-center';
+        emptyCell.textContent = 'Belum ada data';
+        emptyRow.appendChild(emptyCell);
+        tableBody.appendChild(emptyRow);
+        return;
+      }
+
+      items.forEach(function (category) {
+        var row = document.createElement('tr');
+
+        var idCell = document.createElement('td');
+        idCell.textContent = category.id;
+
+        var nameCell = document.createElement('td');
+        nameCell.textContent = category.name;
+
+        var actionCell = document.createElement('td');
+        var editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-primary btn-sm';
+        editBtn.dataset.id = category.id;
+        editBtn.textContent = 'Edit';
+        actionCell.appendChild(editBtn);
+
+        row.appendChild(idCell);
+        row.appendChild(nameCell);
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+      });
+    }
+
+    function renderPagination(page, totalPages) {
+      paginationEl.innerHTML = '';
+
+      function addItem(label, targetPage, disabled, active) {
+        var li = document.createElement('li');
+        li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'page-link';
+        btn.textContent = label;
+        btn.disabled = disabled;
+        if (!disabled) {
+          btn.dataset.page = targetPage;
+        }
+
+        li.appendChild(btn);
+        paginationEl.appendChild(li);
+      }
+
+      addItem('Previous', page - 1, page <= 1, false);
+      for (var p = 1; p <= totalPages; p++) {
+        addItem(String(p), p, false, p === page);
+      }
+      addItem('Next', page + 1, page >= totalPages, false);
+    }
+
+    async function loadPage(page) {
+      var response = await fetch(listUrl + '?page=' + page);
+      if (!response.ok) return;
+
+      var result = await response.json();
+      currentPage = result.page;
+      renderRows(result.items);
+      renderPagination(result.page, result.totalPages);
+    }
+
+    paginationEl.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-page]');
+      if (!btn || btn.disabled) return;
+      loadPage(parseInt(btn.dataset.page, 10));
+    });
 
     modalEl.addEventListener('hidden.bs.modal', function () {
       form.reset();
@@ -53,17 +137,8 @@
           return;
         }
 
-        var category = await response.json();
-
-        var row = document.createElement('tr');
-        row.innerHTML =
-          '<td>' + category.id + '</td>' +
-          '<td></td>' +
-          '<td><button type="button" class="btn btn-primary btn-sm" data-id="' + category.id + '">Edit</button></td>';
-        row.querySelector('td:nth-child(2)').textContent = category.name;
-        tableBody.appendChild(row);
-
         modal.hide();
+        await loadPage(currentPage);
       } catch (err) {
         setError('Terjadi kesalahan koneksi, coba lagi');
       } finally {
@@ -132,19 +207,59 @@
               </tr>
             </thead>
             <tbody id="categoryTableBody">
-              @foreach (var category in Model)
+              @if (Model.Items.Count == 0)
               {
                 <tr>
-                  <td>@category.Id</td>
-                  <td>@category.Name</td>
-                  <td>
-                    <button type="button" class="btn btn-primary btn-sm" data-id="@category.Id">Edit</button>
-                  </td>
+                  <td colspan="3" class="text-center">Belum ada data</td>
                 </tr>
+              }
+              else
+              {
+                @foreach (var category in Model.Items)
+                {
+                  <tr>
+                    <td>@category.Id</td>
+                    <td>@category.Name</td>
+                    <td>
+                      <button type="button" class="btn btn-primary btn-sm" data-id="@category.Id">Edit</button>
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>
         </div>
+
+        <nav>
+          <ul class="pagination justify-content-end" id="categoryPagination">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+              @if (Model.Page <= 1)
+              {
+                <button type="button" class="page-link" disabled>Previous</button>
+              }
+              else
+              {
+                <button type="button" class="page-link" data-page="@(Model.Page - 1)">Previous</button>
+              }
+            </li>
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+              <li class="page-item @(p == Model.Page ? "active" : "")">
+                <button type="button" class="page-link" data-page="@p">@p</button>
+              </li>
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+              @if (Model.Page >= Model.TotalPages)
+              {
+                <button type="button" class="page-link" disabled>Next</button>
+              }
+              else
+              {
+                <button type="button" class="page-link" data-page="@(Model.Page + 1)">Next</button>
+              }
+            </li>
+          </ul>
+        </nav>
       </div>
     </div>
   </div>

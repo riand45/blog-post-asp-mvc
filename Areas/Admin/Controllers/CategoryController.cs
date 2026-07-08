@@ -9,15 +9,42 @@ namespace CompanyProfileMVC.Controllers.Admin
     [Area("Admin")]
     public class CategoryController(AppDbContext context) : Controller
     {
+        private const int PageSize = 10;
+
         private readonly AppDbContext _context = context;
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1)
         {
-            var categories = await _context.Categories
+            var result = await GetPagedCategoriesAsync(page);
+            return View(result);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> List(int page = 1)
+        {
+            var result = await GetPagedCategoriesAsync(page);
+            return Json(result);
+        }
+
+        private async Task<CategoryListViewModel> GetPagedCategoriesAsync(int page)
+        {
+            page = Math.Max(page, 1);
+            var totalCount = await _context.Categories.CountAsync();
+
+            var items = await _context.Categories
+                .OrderBy(c => c.Id)
+                .Skip((page - 1) * PageSize)
+                .Take(PageSize)
                 .Select(c => new CategoryViewModel { Id = c.Id, Name = c.Name })
                 .ToListAsync();
 
-            return View(categories);
+            return new CategoryListViewModel
+            {
+                Items = items,
+                Page = page,
+                PageSize = PageSize,
+                TotalCount = totalCount
+            };
         }
 
         [HttpPost]
