@@ -12,26 +12,52 @@
 <script src="~/js/dashboards-analytics.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    var form = document.getElementById('addCategoryForm');
-    var input = document.getElementById('nameBasic');
-    var errorEl = document.getElementById('nameBasicError');
-    var spinner = document.getElementById('addCategorySpinner');
-    var submitBtn = form.querySelector('button[type="submit"]');
-    var modalEl = document.getElementById('basicModal');
-    var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    var addForm = document.getElementById('addCategoryForm');
+    var addInput = document.getElementById('nameBasic');
+    var addError = document.getElementById('nameBasicError');
+    var addSpinner = document.getElementById('addCategorySpinner');
+    var addSubmitBtn = addForm.querySelector('button[type="submit"]');
+    var addModalEl = document.getElementById('basicModal');
+    var addModal = bootstrap.Modal.getOrCreateInstance(addModalEl);
+
+    var editForm = document.getElementById('editCategoryForm');
+    var editIdInput = document.getElementById('editCategoryId');
+    var editNameInput = document.getElementById('editCategoryName');
+    var editError = document.getElementById('editCategoryNameError');
+    var editSpinner = document.getElementById('editCategorySpinner');
+    var editSubmitBtn = editForm.querySelector('button[type="submit"]');
+    var editModalEl = document.getElementById('editCategoryModal');
+    var editModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
+
+    var deleteForm = document.getElementById('deleteCategoryForm');
+    var deleteIdInput = document.getElementById('deleteCategoryId');
+
     var tableBody = document.getElementById('categoryTableBody');
     var paginationEl = document.getElementById('categoryPagination');
     var listUrl = '@Url.Action("List", "Category")';
     var currentPage = @Model.Page;
 
-    function setLoading(isLoading) {
-      submitBtn.disabled = isLoading;
-      spinner.classList.toggle('d-none', !isLoading);
-    }
+    function buildActionCell(id, name) {
+      var actionCell = document.createElement('td');
 
-    function setError(message) {
-      errorEl.textContent = message || '';
-      input.classList.toggle('is-invalid', !!message);
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'btn btn-primary btn-sm me-2';
+      editBtn.dataset.action = 'edit';
+      editBtn.dataset.id = id;
+      editBtn.dataset.name = name;
+      editBtn.textContent = 'Edit';
+
+      var deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'btn btn-danger btn-sm';
+      deleteBtn.dataset.action = 'delete';
+      deleteBtn.dataset.id = id;
+      deleteBtn.textContent = 'Delete';
+
+      actionCell.appendChild(editBtn);
+      actionCell.appendChild(deleteBtn);
+      return actionCell;
     }
 
     function renderRows(items) {
@@ -57,17 +83,9 @@
         var nameCell = document.createElement('td');
         nameCell.textContent = category.name;
 
-        var actionCell = document.createElement('td');
-        var editBtn = document.createElement('button');
-        editBtn.type = 'button';
-        editBtn.className = 'btn btn-primary btn-sm';
-        editBtn.dataset.id = category.id;
-        editBtn.textContent = 'Edit';
-        actionCell.appendChild(editBtn);
-
         row.appendChild(idCell);
         row.appendChild(nameCell);
-        row.appendChild(actionCell);
+        row.appendChild(buildActionCell(category.id, category.name));
         tableBody.appendChild(row);
       });
     }
@@ -101,12 +119,20 @@
 
     async function loadPage(page) {
       var response = await fetch(listUrl + '?page=' + page);
-      if (!response.ok) return;
+      if (!response.ok) return null;
 
       var result = await response.json();
       currentPage = result.page;
       renderRows(result.items);
       renderPagination(result.page, result.totalPages);
+      return result;
+    }
+
+    async function reloadAfterMutation() {
+      var result = await loadPage(currentPage);
+      if (result && result.items.length === 0 && result.page > 1) {
+        await loadPage(result.page - 1);
+      }
     }
 
     paginationEl.addEventListener('click', function (e) {
@@ -115,34 +141,122 @@
       loadPage(parseInt(btn.dataset.page, 10));
     });
 
-    modalEl.addEventListener('hidden.bs.modal', function () {
-      form.reset();
-      setError('');
+    // Add Category
+    function setAddLoading(isLoading) {
+      addSubmitBtn.disabled = isLoading;
+      addSpinner.classList.toggle('d-none', !isLoading);
+    }
+
+    function setAddError(message) {
+      addError.textContent = message || '';
+      addInput.classList.toggle('is-invalid', !!message);
+    }
+
+    addModalEl.addEventListener('hidden.bs.modal', function () {
+      addForm.reset();
+      setAddError('');
     });
 
-    form.addEventListener('submit', async function (e) {
+    addForm.addEventListener('submit', async function (e) {
       e.preventDefault();
-      setError('');
-      setLoading(true);
+      setAddError('');
+      setAddLoading(true);
 
       try {
-        var response = await fetch(form.action, {
+        var response = await fetch(addForm.action, {
           method: 'POST',
-          body: new FormData(form)
+          body: new FormData(addForm)
         });
 
         if (!response.ok) {
           var problem = await response.json().catch(function () { return {}; });
-          setError(problem.message || 'Gagal menyimpan kategori');
+          setAddError(problem.message || 'Gagal menyimpan kategori');
           return;
         }
 
-        modal.hide();
+        addModal.hide();
+        await reloadAfterMutation();
+      } catch (err) {
+        setAddError('Terjadi kesalahan koneksi, coba lagi');
+      } finally {
+        setAddLoading(false);
+      }
+    });
+
+    // Edit Category
+    function setEditLoading(isLoading) {
+      editSubmitBtn.disabled = isLoading;
+      editSpinner.classList.toggle('d-none', !isLoading);
+    }
+
+    function setEditError(message) {
+      editError.textContent = message || '';
+      editNameInput.classList.toggle('is-invalid', !!message);
+    }
+
+    editModalEl.addEventListener('hidden.bs.modal', function () {
+      editForm.reset();
+      setEditError('');
+    });
+
+    editForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      setEditError('');
+      setEditLoading(true);
+
+      try {
+        var response = await fetch(editForm.action, {
+          method: 'POST',
+          body: new FormData(editForm)
+        });
+
+        if (!response.ok) {
+          var problem = await response.json().catch(function () { return {}; });
+          setEditError(problem.message || 'Gagal menyimpan perubahan');
+          return;
+        }
+
+        editModal.hide();
         await loadPage(currentPage);
       } catch (err) {
-        setError('Terjadi kesalahan koneksi, coba lagi');
+        setEditError('Terjadi kesalahan koneksi, coba lagi');
       } finally {
-        setLoading(false);
+        setEditLoading(false);
+      }
+    });
+
+    // Edit / Delete triggers (event delegation, rows are re-rendered dynamically)
+    tableBody.addEventListener('click', async function (e) {
+      var editBtn = e.target.closest('button[data-action="edit"]');
+      if (editBtn) {
+        editIdInput.value = editBtn.dataset.id;
+        editNameInput.value = editBtn.dataset.name;
+        setEditError('');
+        editModal.show();
+        return;
+      }
+
+      var deleteBtn = e.target.closest('button[data-action="delete"]');
+      if (deleteBtn) {
+        if (!confirm('Hapus kategori ini?')) return;
+
+        deleteBtn.disabled = true;
+        try {
+          deleteIdInput.value = deleteBtn.dataset.id;
+          var response = await fetch(deleteForm.action, {
+            method: 'POST',
+            body: new FormData(deleteForm)
+          });
+
+          if (!response.ok) {
+            alert('Gagal menghapus kategori');
+            return;
+          }
+
+          await reloadAfterMutation();
+        } finally {
+          deleteBtn.disabled = false;
+        }
       }
     });
   });
@@ -164,7 +278,7 @@
               <!-- Button trigger modal -->
               <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#basicModal">Add Category</button>
 
-              <!-- Modal -->
+              <!-- Add Category Modal -->
               <div class="modal fade" id="basicModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                   <form id="addCategoryForm" asp-controller="Category" asp-action="Create" method="post">
@@ -193,6 +307,42 @@
                   </form>
                 </div>
               </div>
+
+              <!-- Edit Category Modal -->
+              <div class="modal fade" id="editCategoryModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                  <form id="editCategoryForm" asp-controller="Category" asp-action="Update" method="post">
+                    <input type="hidden" name="Id" id="editCategoryId" />
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Edit Category</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="row g-6">
+                          <div class="col mb-6">
+                            <label for="editCategoryName" class="form-label">Name</label>
+                            <input type="text" name="Name" id="editCategoryName" class="form-control" placeholder="Enter Name" />
+                            <div class="invalid-feedback d-block" id="editCategoryNameError"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-label-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">
+                          <span class="spinner-border spinner-border-sm d-none" id="editCategorySpinner"></span>
+                          Save changes
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <!-- Delete Category Form (hidden, submitted via JS) -->
+              <form id="deleteCategoryForm" asp-controller="Category" asp-action="Delete" method="post" class="d-none">
+                <input type="hidden" name="id" id="deleteCategoryId" />
+              </form>
             </div>
           </div>
         </div>
@@ -221,7 +371,8 @@
                     <td>@category.Id</td>
                     <td>@category.Name</td>
                     <td>
-                      <button type="button" class="btn btn-primary btn-sm" data-id="@category.Id">Edit</button>
+                      <button type="button" class="btn btn-primary btn-sm me-2" data-action="edit" data-id="@category.Id" data-name="@category.Name">Edit</button>
+                      <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-id="@category.Id">Delete</button>
                     </td>
                   </tr>
                 }

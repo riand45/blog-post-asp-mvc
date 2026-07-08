@@ -62,5 +62,42 @@ namespace CompanyProfileMVC.Controllers.Admin
 
             return Json(new { id = category.Id, name = category.Name });
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Update(EditCategoryViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { message = "Nama kategori wajib diisi" });
+            }
+
+            var category = await _context.Categories.FindAsync(model.Id);
+            if (category is null)
+            {
+                return NotFound(new { message = "Kategori tidak ditemukan" });
+            }
+
+            category.Name = model.Name;
+            await _context.SaveChangesAsync();
+
+            return Json(new { id = category.Id, name = category.Name });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+            if (category is null)
+            {
+                return NotFound(new { message = "Kategori tidak ditemukan" });
+            }
+
+            _context.Categories.Remove(category);
+            await _context.SaveChangesAsync();
+
+            return Ok();
+        }
     }
 }
